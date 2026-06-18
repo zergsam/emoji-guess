@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+<title>Emoji猜成语</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box}
+body{
+  font-family:'PingFang SC','Microsoft YaHei',sans-serif;
+  background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);
+  min-height:100vh;display:flex;flex-direction:column;align-items:center;
+  justify-content:center;padding:20px;user-select:none;
+}
+.container{width:100%;max-width:420px}
+.header{text-align:center;margin-bottom:24px}
+.header .title{font-size:28px;font-weight:800;color:#fff;letter-spacing:2px}
+.header .subtitle{font-size:13px;color:rgba(255,255,255,.7);margin-top:4px}
+.score-bar{display:flex;justify-content:space-between;align-items:center;
+  background:rgba(255,255,255,.15);backdrop-filter:blur(10px);
+  border-radius:16px;padding:14px 20px;margin-bottom:20px}
+.score-bar .label{font-size:13px;color:rgba(255,255,255,.6)}
+.score-bar .value{font-size:22px;font-weight:700;color:#ffd700}
+.streak-badge{background:#ff6b6b;color:#fff;font-size:12px;font-weight:600;
+  padding:4px 10px;border-radius:20px;display:none}
+.streak-badge.show{display:inline-block;animation:pulse .5s ease}
+@keyframes pulse{0%,100%{transform:scale(1)}50%{transform:scale(1.15)}}
+.emoji-card{background:rgba(255,255,255,.95);border-radius:24px;
+  padding:40px 24px;text-align:center;margin-bottom:20px;
+  box-shadow:0 20px 60px rgba(0,0,0,.15);position:relative;overflow:hidden}
+.emoji-card .q-num{font-size:12px;color:#999;margin-bottom:8px}
+.emoji-card .emojis{font-size:56px;letter-spacing:8px;margin-bottom:8px;line-height:1.3}
+.emoji-card .hint-text{font-size:14px;color:#999;min-height:20px}
+.options{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+.option-btn{background:rgba(255,255,255,.92);border:none;border-radius:14px;
+  padding:16px 12px;font-size:17px;font-weight:600;color:#333;
+  cursor:pointer;transition:all .2s;box-shadow:0 4px 15px rgba(0,0,0,.08);
+  letter-spacing:1px}
+.option-btn:hover{transform:translateY(-2px);box-shadow:0 8px 25px rgba(0,0,0,.15)}
+.option-btn:active{transform:scale(.96)}
+.option-btn.correct{background:#51cf66;color:#fff;animation:correctPop .4s ease}
+.option-btn.wrong{background:#ff6b6b;color:#fff;animation:shake .4s ease}
+@keyframes correctPop{0%{transform:scale(1)}50%{transform:scale(1.08)}100%{transform:scale(1)}}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-6px)}75%{transform:translateX(6px)}}
+.actions{display:flex;gap:10px;margin-bottom:20px}
+.tip-btn{flex:1;background:rgba(255,255,255,.2);border:1.5px solid rgba(255,255,255,.4);
+  color:#fff;border-radius:12px;padding:12px;font-size:14px;font-weight:600;
+  cursor:pointer;transition:all .2s}
+.tip-btn:hover{background:rgba(255,255,255,.3)}
+.tip-btn:disabled{opacity:.4;cursor:not-allowed}
+.tip-btn .cost{font-size:11px;display:block;color:rgba(255,255,255,.6)}
+.result-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;
+  background:rgba(0,0,0,.75);z-index:100;justify-content:center;align-items:center}
+.result-overlay.show{display:flex}
+.result-card{background:#fff;border-radius:24px;padding:36px 28px;
+  text-align:center;width:90%;max-width:380px}
+.result-card .big-emoji{font-size:64px;margin-bottom:12px}
+.result-card h2{font-size:24px;margin-bottom:4px}
+.result-card .score-final{font-size:40px;font-weight:800;color:#764ba2;margin:8px 0}
+.result-card .max-streak{font-size:15px;color:#666;margin-bottom:20px}
+.result-card .share-btn{background:linear-gradient(135deg,#667eea,#764ba2);
+  color:#fff;border:none;border-radius:14px;padding:14px 36px;
+  font-size:17px;font-weight:700;cursor:pointer;width:100%;
+  box-shadow:0 6px 25px rgba(118,75,162,.4);margin-bottom:10px}
+.result-card .restart-btn{background:#f5f5f5;color:#666;border:none;
+  border-radius:14px;padding:12px 36px;font-size:15px;cursor:pointer;width:100%}
+.share-hint{display:none;background:rgba(255,255,255,.15);border-radius:12px;
+  padding:10px 16px;font-size:13px;color:#fff;text-align:center;margin-bottom:16px}
+.share-hint.show{display:block}
+.game-over-btns{display:none;gap:8px;margin-top:16px}
+.game-over-btns.show{display:flex;flex-direction:column}
+</style>
+</head>
+<body>
+<div class="container">
+  <div class="header">
+    <div class="title">🎭 Emoji猜成语</div>
+    <div class="subtitle">看表情符号，猜四字成语</div>
+  </div>
+  <div class="score-bar">
+    <div><span class="label">得分</span><br><span class="value" id="scoreVal">0</span></div>
+    <div><span class="label">连对</span><br><span class="value" id="streakVal">0</span><span class="streak-badge" id="streakBadge">🔥</span></div>
+    <div><span class="label">剩余</span><br><span class="value" id="remainVal">30</span></div>
+  </div>
+  <div class="emoji-card" id="emojiCard">
+    <div class="q-num" id="qNum">第 1/30 题</div>
+    <div class="emojis" id="emojis"></div>
+    <div class="hint-text" id="hintText"></div>
+  </div>
+  <div class="options" id="options"></div>
+  <div class="share-hint" id="shareHint">
+    💡 试试点击右上角「···」分享给朋友一起玩！
+  </div>
+  <div class="actions">
+    <button class="tip-btn" id="tipBtn" onclick="useTip()">
+      提示<span class="cost">-5分</span>
+    </button>
+    <button class="tip-btn" id="skipBtn" onclick="skipQuestion()">
+      跳过<span class="cost">不扣分</span>
+    </button>
+  </div>
+</div>
+
+<div class="result-overlay" id="resultOverlay">
+  <div class="result-card">
+    <div class="big-emoji" id="resultEmoji"></div>
+    <h2 id="resultTitle"></h2>
+    <div class="score-final" id="resultScore"></div>
+    <div class="max-streak" id="resultStreak"></div>
+    <div class="game-over-btns" id="gameOverBtns">
+      <button class="share-btn" onclick="shareResult()">📤 炫耀成绩</button>
+      <button class="restart-btn" onclick="restartGame()">再来一局</button>
+    </div>
+  </div>
+</div>
+
+<script>
+const ALL_QUESTIONS = [
+  {emoji:"🐔✈️🥚🔨",ans:"鸡飞蛋打",hint:"鸡__蛋_"},
+  {emoji:"🐴🐴🐯🐯",ans:"马马虎虎",hint:"马_虎_"},
+  {emoji:"🐮🍺🐯🐯",ans:"牛气冲天",hint:"牛_冲_"},
+  {emoji:"👀👋👋👋",ans:"眼高手低",hint:"眼_手_"},
+  {emoji:"🌊🔪⛰️🔥",ans:"刀山火海",hint:"刀_火_"},
+  {emoji:"🌹⬆️🌙⬇️",ans:"花好月圆",hint:"花_月_"},
+  {emoji:"❤️🦁🐘🍊",ans:"心想事成",hint:"心_事_"},
+  {emoji:"🦅🦅🦅🦅",ans:"一石二鸟",hint:null},
+  {emoji:"🐉🐉🐉🐉",ans:"龙飞凤舞",hint:"龙_凤_"},
+  {emoji:"🐢🐰🏃💨",ans:"龟兔赛跑",hint:"龟_赛_"},
+  {emoji:"💧💧💧💧",ans:"水滴石穿",hint:"水_石_"},
+  {emoji:"😱🐺🐺🐺",ans:"引狼入室",hint:"引_入_"},
+  {emoji:"🌞🌞🌞🌞",ans:"风和日丽",hint:"风_日_"},
+  {emoji:"🐟🐟🐟🐟",ans:"如鱼得水",hint:"如_得_"},
+  {emoji:"🏔️🏔️🏔️🏔️",ans:"山清水秀",hint:"山_水_"},
+  {emoji:"🦁🦁🦁🦁",ans:"虎头蛇尾",hint:"虎_蛇_"},
+  {emoji:"🎋🎋🎋🎋",ans:"胸有成竹",hint:"胸_成_"},
+  {emoji:"🐍🐍🐍🐍",ans:"画蛇添足",hint:"画_添_"},
+  {emoji:"🌙🌙🌙🌙",ans:"披星戴月",hint:"披_戴_"},
+  {emoji:"🐒🐒🐒🐒",ans:"猴年马月",hint:"猴_马_"},
+  {emoji:"🐤🐤🐤🐤",ans:"闻鸡起舞",hint:"闻_起_"},
+  {emoji:"🐘🐘🐘🐘",ans:"盲人摸象",hint:"盲_摸_"},
+  {emoji:"💨💨💨💨",ans:"风卷残云",hint:"风_残_"},
+  {emoji:"🌳🌳🌳🌳",ans:"守株待兔",hint:"守_待_"},
+  {emoji:"🐲🐲🐲🐲",ans:"叶公好龙",hint:"叶_好_"},
+  {emoji:"🔔🔔🔔🔔",ans:"掩耳盗铃",hint:"掩_盗_"},
+  {emoji:"🍎🍎🍎🍎",ans:"自相矛盾",hint:"自_矛_"},
+  {emoji:"🦊🦊🦊🦊",ans:"狐假虎威",hint:"狐_虎_"},
+  {emoji:"🏃💨🏃💨",ans:"对牛弹琴",hint:null},
+  {emoji:"🌿🌿🌿🌿",ans:"打草惊蛇",hint:"打_惊_"},
+  {emoji:"🍇🍇🍇🍇",ans:"井底之蛙",hint:"井_之_"},
+  {emoji:"🪨🪨🪨🪨",ans:"以卵击石",hint:"以_击_"},
+  {emoji:"🌺🌺🌺🌺",ans:"锦上添花",hint:"锦_添_"},
+  {emoji:"🐝🐝🐝🐝",ans:"亡羊补牢",hint:"亡_补_"},
+  {emoji:"👂👂👂👂",ans:"耳濡目染",hint:"耳_目_"},
+  {emoji:"🦷🦷🦷🦷",ans:"虎口拔牙",hint:"虎_拔_"},
+  {emoji:"🌧️🌧️🌧️🌧️",ans:"风雨同舟",hint:"风_同_"},
+  {emoji:"⛄⛄⛄⛄",ans:"雪中送炭",hint:"雪_送_"},
+  {emoji:"🔥🔥🔥🔥",ans:"火上浇油",hint:"火_浇_"},
+  {emoji:"🪞🪞🪞🪞",ans:"破镜重圆",hint:"破_重_"},
+];
+
+// 更好的emoji映射
+const BETTER_EMOJIS = {
+  "鸡飞蛋打":"🐔✈️🥚🔨",
+  "马马虎虎":"🐴🐴🐯🐯",
+  "牛气冲天":"🐮💨🌥️🐯",
+  "眼高手低":"👀🖐️🔼🔽",
+  "刀山火海":"🔪⛰️🔥🌊",
+  "花好月圆":"🌸👍🌕⭕",
+  "心想事成":"💭🐘🍅🏆",
+  "一石二鸟":"1️⃣🪨2️⃣🐦",
+  "龙飞凤舞":"🐉✈️🦚💃",
+  "龟兔赛跑":"🐢🐰🏃🏁",
+  "水滴石穿":"💧⬇️🪨🔩",
+  "引狼入室":"🧲🐺🚪🏠",
+  "风和日丽":"🌬️☮️☀️🌺",
+  "如鱼得水":"🐟💧😊👍",
+  "山清水秀":"⛰️💚💧✨",
+  "虎头蛇尾":"🐯👤🐍🍑",
+  "胸有成竹":"🫁👌🌿🎋",
+  "画蛇添足":"🎨🐍➕🦶",
+  "披星戴月":"🧥⭐👑🌙",
+  "猴年马月":"🐒📅🐴🌙",
+  "闻鸡起舞":"👃🐔💃🕺",
+  "盲人摸象":"🙈👋🐘",
+  "风卷残云":"💨🌀🧹☁️",
+  "守株待兔":"🛡️🌳⏳🐰",
+  "叶公好龙":"🍃👴❤️🐉",
+  "掩耳盗铃":"🙉🔔🏃",
+  "自相矛盾":"🪞⚔️🛡️",
+  "狐假虎威":"🦊🎭🐯💪",
+  "对牛弹琴":"🐮🎹🎶",
+  "打草惊蛇":"🥊🌿😱🐍",
+  "井底之蛙":"🕳️🐸⬇️",
+  "以卵击石":"🥚💥🪨",
+  "锦上添花":"🧣⬆️➕🌸",
+  "亡羊补牢":"💀🐑🔧🚪",
+  "耳濡目染":"👂💧👁️🎨",
+  "虎口拔牙":"🐯👄🦷🔧",
+  "风雨同舟":"🌧️💨🤝🚣",
+  "雪中送炭":"❄️📦🔥",
+  "火上浇油":"🔥⬆️⛽",
+  "破镜重圆":"💔🪞🔄⭕",
+};
+
+let questions=[],currentIdx=0,score=0,streak=0,maxStreak=0,tipsLeft=3,answered=false;
+let totalQuestions=30;
+
+function shuffle(a){for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+
+function getEmoji(idiom){
+  return BETTER_EMOJIS[idiom] || idiom.split('').map(c=>'🈁').join('');
+}
+
+function initGame(){
+  questions=shuffle([...ALL_QUESTIONS]).slice(0,totalQuestions);
+  currentIdx=0;score=0;streak=0;maxStreak=0;tipsLeft=3;answered=false;
+  document.getElementById('resultOverlay').classList.remove('show');
+  document.getElementById('gameOverBtns').classList.remove('show');
+  updateUI();
+  loadQuestion();
+}
+
+function updateUI(){
+  document.getElementById('scoreVal').textContent=score;
+  document.getElementById('streakVal').textContent=streak;
+  document.getElementById('remainVal').textContent=totalQuestions-currentIdx;
+  const badge=document.getElementById('streakBadge');
+  if(streak>=5){badge.classList.add('show')}else{badge.classList.remove('show')}
+  document.getElementById('tipBtn').disabled=tipsLeft<=0;
+  document.getElementById('tipBtn').querySelector('.cost').textContent=tipsLeft>0?'-5分':'已用完';
+}
+
+function loadQuestion(){
+  if(currentIdx>=totalQuestions){endGame();return}
+  answered=false;
+  const q=questions[currentIdx];
+  document.getElementById('qNum').textContent=`第 ${currentIdx+1}/${totalQuestions} 题`;
+  document.getElementById('emojis').textContent=getEmoji(q.ans);
+  document.getElementById('hintText').textContent='';
+  
+  const wrongAnswers=shuffle(ALL_QUESTIONS.filter(x=>x.ans!==q.ans)).slice(0,3).map(x=>x.ans);
+  const opts=shuffle([q.ans,...wrongAnswers]);
+  
+  const optDiv=document.getElementById('options');
+  optDiv.innerHTML=opts.map(a=>`<button class="option-btn" onclick="answer('${a}')">${a}</button>`).join('');
+  
+  // show share hint at question 5
+  if(currentIdx===4)document.getElementById('shareHint').classList.add('show');
+}
+
+function answer(choice){
+  if(answered)return;
+  answered=true;
+  const q=questions[currentIdx];
+  const btns=document.querySelectorAll('.option-btn');
+  
+  btns.forEach(b=>{
+    if(b.textContent===q.ans)b.classList.add('correct');
+    else if(b.textContent===choice&&choice!==q.ans)b.classList.add('wrong');
+    b.style.pointerEvents='none';
+  });
+  
+  if(choice===q.ans){
+    score+=10;
+    streak++;
+    if(streak>maxStreak)maxStreak=streak;
+  }else{
+    streak=0;
+  }
+  updateUI();
+  
+  setTimeout(()=>{
+    currentIdx++;
+    loadQuestion();
+  },1000);
+}
+
+function useTip(){
+  if(answered||tipsLeft<=0)return;
+  tipsLeft--;
+  score=Math.max(0,score-5);
+  const q=questions[currentIdx];
+  const hint=q.hint||(q.ans[0]+'__'+q.ans[3]);
+  document.getElementById('hintText').textContent='提示：'+hint;
+  updateUI();
+}
+
+function skipQuestion(){
+  if(answered)return;
+  streak=0;updateUI();
+  currentIdx++;
+  loadQuestion();
+}
+
+function endGame(){
+  document.getElementById('resultOverlay').classList.add('show');
+  document.getElementById('gameOverBtns').classList.add('show');
+  document.getElementById('resultEmoji').textContent=score>=200?'🏆':score>=120?'🎉':score>=60?'👍':'💪';
+  document.getElementById('resultTitle').textContent=score>=200?'成语大师！':score>=120?'博学多才！':score>=60?'还不错哦！':'继续加油！';
+  document.getElementById('resultScore').textContent=score+'分';
+  document.getElementById('resultStreak').textContent='最高连对 '+maxStreak+' 题';
+}
+
+function shareResult(){
+  const text=`🎭 Emoji猜成语\n我得了 ${score} 分！最高连对 ${maxStreak} 题\n你能超过我吗？快来挑战！`;
+  if(navigator.share){navigator.share({title:'Emoji猜成语',text:text})}
+  else{navigator.clipboard.writeText(text).then(()=>alert('已复制分享文案，去粘贴给朋友吧！'))}
+}
+
+function restartGame(){
+  document.getElementById('resultOverlay').classList.remove('show');
+  initGame();
+}
+
+// 分享引导 - 游戏结束自动弹出
+const origEndGame=endGame;
+endGame=function(){
+  origEndGame();
+  if(currentIdx>=totalQuestions){
+    setTimeout(()=>{
+      // auto show share after 2s
+    },2000);
+  }
+};
+
+initGame();
+</script>
+</body>
+</html>
