@@ -120,6 +120,17 @@ body{font-family:'PingFang SC','Microsoft YaHei',sans-serif;background:#0a0a1a;m
 .rank-table .rank-num.bronze{color:#cd7f32;font-size:14px}
 
 .result-card .btns{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+/* 赞赏区域 */
+.support-card{background:rgba(255,215,0,.06);border:1px solid rgba(255,215,0,.15);
+  border-radius:14px;padding:14px;margin:8px 0}
+.support-title{font-size:13px;color:#ffd700;margin-bottom:8px;font-weight:600}
+.support-row{display:flex;justify-content:center;gap:12px;margin-bottom:8px}
+.support-item{text-align:center}
+.pay-qr{width:120px;height:120px;border-radius:10px;border:2px solid rgba(255,255,255,.1);display:block}
+.pay-label{font-size:11px;color:rgba(255,255,255,.4);margin-top:4px}
+.jd-link-btn{display:block;background:linear-gradient(135deg,#e4393c,#c1272d);color:#fff;
+  text-decoration:none;border-radius:10px;padding:10px;font-size:13px;font-weight:600;text-align:center}
+
 .result-card .share-btn{background:linear-gradient(135deg,#667eea,#764ba2);
   color:#fff;border:none;border-radius:12px;padding:12px;font-size:15px;font-weight:700;cursor:pointer;width:100%}
 .result-card .restart-btn{background:rgba(255,255,255,.08);color:rgba(255,255,255,.5);
@@ -458,6 +469,16 @@ function showResult(){
     <div class="final-score">${score}分</div>
     <div class="detail">勇者 <span>${playerName||'无名'}</span> · 到达 <span>第${level}关</span> · 排名 <span>#${myRank||'?'}</span></div>
     ${rankHtml}
+    <div class="support-card">
+      <div class="support-title">❤️ 觉得好玩？支持一下作者</div>
+      <div class="support-row">
+        <div class="support-item">
+          <img src="weixinpay.jpg" class="pay-qr" alt="微信赞赏码">
+          <div class="pay-label">微信扫一扫赞赏</div>
+        </div>
+      </div>
+      <a href="https://u.jd.com/VrTGwBS" target="_blank" class="jd-link-btn">🛒 京东超值好物推荐 →</a>
+    </div>
     <div class="btns">
       <button class="share-btn" onclick="shareResult()">📤 分享战绩</button>
       <button class="restart-btn" onclick="restartGame()">🔄 再来一局</button>
